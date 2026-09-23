@@ -259,11 +259,73 @@ async function makeZip(files) { // [{name, blob}]
   return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
 }
 
+/* ---------------------------------------------------- lines already packed
+
+   Which lines someone has already recorded and committed to the mod. Lines in
+   the list get a yellow dot: done, but not by you and not in your output
+   folder. Green stays reserved for takes that are actually on this machine.
+
+   The list is packed/main.tsv in the public repo, fetched at startup so a copy
+   of this app handed out weeks ago still shows what is current. The fetch is
+   the only network request the app makes, it is a public raw.githubusercontent
+   URL (CORS-open, so it works from file:// too), and nothing is sent -- no
+   query, no identifier, just a GET. It is also allowed to fail: the list built
+   into this file is the fallback, and with neither one every line simply reads
+   as not recorded, which costs nothing but a duplicated take. */
+const PACKED_URL =
+  'https://raw.githubusercontent.com/Heyes-Matthew/deadlock-voiceover/main/packed/main.tsv';
+const PACKED = [];   /* snapshot baked in by build_recorder.py, used if offline */
+
+/* First column of a packed/*.tsv, minus the comments and the column header. */
+function parsePacked(text) {
+  const out = [];
+  for (const line of text.split('\n')) {
+    if (!line || line[0] === '#') continue;
+    const asset = line.split('\t')[0].trim();
+    if (asset.endsWith('.vsnd_c')) out.push(asset);
+  }
+  return out;
+}
+
+async function fetchPacked() {
+  const r = await fetch(PACKED_URL, { cache: 'no-cache' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const list = parsePacked(await r.text());
+  if (!list.length) throw new Error('no assets listed');
+  return list;
+}
+
+/* Kicked off at startup and not awaited -- the app is usable while it lands,
+   and the dots repaint when it does. */
+async function loadPacked() {
+  try {
+    S.packed = new Set(await fetchPacked());
+    S.packedFrom = 'repo';
+  } catch (e) {
+    S.packedFrom = PACKED.length ? 'built-in' : 'none';
+    console.warn('packed list: using the built-in snapshot -', e.message);
+  }
+  renderPackedStatus();
+  refresh();
+}
+
+function renderPackedStatus() {
+  const el = $('#packedStatus');
+  if (!el) return;
+  el.textContent =
+    S.packedFrom === 'repo' ? `${S.packed.size} already in the pack` :
+    S.packedFrom === 'built-in' ? `${S.packed.size} in the pack (offline — list may be out of date)` :
+    S.packedFrom === 'none' ? '' : 'checking the pack…';
+  el.title = S.packedFrom === 'repo'
+    ? 'Live from the project repo'
+    : 'Could not reach the repo; showing the list built into this file';
+}
+
 /* ------------------------------------------------------------ app state */
 const S = {
   vpk: null, clips: [], groups: new Map(), group: null,
   out: null, outFiles: new Map(), limits: new Map(), limit: 0, viz: 0,
-  filtered: [], sel: -1, done: new Set(),
+  filtered: [], sel: -1, done: new Set(), packed: new Set(PACKED), packedFrom: null,
   audio: new Audio(), recorder: null, stream: null, chunks: [], recording: false,
 };
 
@@ -514,6 +576,16 @@ function buildIndex() {
 const sortedGroups = () =>
   [...S.groups].sort((a, b) => groupLabel(a[0]).localeCompare(groupLabel(b[0])));
 
+/* A line is covered if it has a take here (green) or is already in the pack
+   (yellow). Local always wins: a take on this machine is the one that would be
+   sent back, whatever the committed list says. */
+const covered = path => S.done.has(path) || S.packed.has(path);
+const dotClass = path =>
+  S.done.has(path) ? ' done' : S.packed.has(path) ? ' packed' : '';
+const dotTitle = path =>
+  S.done.has(path) ? 'Recorded \u2014 saved here' :
+  S.packed.has(path) ? 'Already recorded and in the voice pack' : 'Not recorded yet';
+
 function renderGroups() {
   const host = $('#groups');
   host.innerHTML = '';
@@ -521,7 +593,7 @@ function renderGroups() {
     const b = document.createElement('button');
     b.className = 'grp';
     b.setAttribute('aria-current', String(g === S.group));
-    const doneN = S.clips.filter(c => c.group === g && S.done.has(c.path)).length;
+    const doneN = S.clips.filter(c => c.group === g && covered(c.path)).length;
     b.innerHTML = `<span>${groupLabel(g)}</span><span class="n">${doneN ? doneN + '/' : ''}${n}</span>`;
     b.onclick = () => { S.group = g; $('#q').value = ''; refresh(); };
     host.appendChild(b);
@@ -536,7 +608,7 @@ function applyFilter() {
     if (q) { if (!c.path.toLowerCase().includes(q)) return false; }
     else if (c.group !== S.group) return false;
     if (cat && c.cat !== cat) return false;
-    if (todo && S.done.has(c.path)) return false;
+    if (todo && covered(c.path)) return false;
     return true;
   });
 }
@@ -558,7 +630,7 @@ function renderList() {
     row.className = 'row';
     row.setAttribute('aria-selected', String(i === S.sel));
     row.innerHTML =
-      `<span class="dot${S.done.has(c.path) ? ' done' : ''}"></span>` +
+      `<span class="dot${dotClass(c.path)}" title="${dotTitle(c.path)}"></span>` +
       `<span class="nm">${c.name}</span>` +
       `<span class="dur">${(c.size / 1024).toFixed(0)} KB</span>` +
       `<button class="mini">▶</button>`;
@@ -567,10 +639,13 @@ function renderList() {
   });
   host.appendChild(frag);
   $('#empty').classList.toggle('hide', S.filtered.length > 0);
-  const total = S.clips.filter(c => c.group === S.group).length;
-  const done = S.clips.filter(c => c.group === S.group && S.done.has(c.path)).length;
-  $('#count').textContent = `${S.filtered.length} shown · ${done}/${total} recorded`;
-  $('#prog i').style.width = total ? (done / total * 100) + '%' : '0';
+  const mine = S.clips.filter(c => c.group === S.group);
+  const total = mine.length;
+  const done = mine.filter(c => S.done.has(c.path)).length;
+  const packed = mine.filter(c => !S.done.has(c.path) && S.packed.has(c.path)).length;
+  $('#count').textContent = `${S.filtered.length} shown · ${done}/${total} recorded` +
+    (packed ? ` · ${packed} already in the pack` : '');
+  $('#prog i').style.width = total ? ((done + packed) / total * 100) + '%' : '0';
 }
 
 function refresh() { $('#who').textContent = groupLabel(S.group); renderCats(); applyFilter(); if (S.sel >= S.filtered.length) S.sel = -1; renderGroups(); renderList(); renderPanel(); }
@@ -602,6 +677,12 @@ async function renderPanel() {
     try { m = await DB.getTakeMeta(c.path); } catch { /* optional */ }
     badge.textContent = m && m.duration ? `take ${m.duration.toFixed(2)}s / ${S.limit.toFixed(2)}s`
       : S.outFiles.has(c.path) ? 'saved in folder' : 'recorded';
+    badge.classList.remove('hide');
+    badge.className = 'badge';
+  } else if (c && S.packed.has(c.path)) {
+    // recorded by someone else already; recording over it is allowed, not asked for
+    badge.textContent = 'already in the pack';
+    badge.className = 'badge packed';
     badge.classList.remove('hide');
   } else badge.classList.add('hide');
 }
@@ -891,7 +972,9 @@ async function start(files) {
   $('#saveStatus').textContent = S.out ? `saving to ${S.out.name}` : 'saving in browser';
   $('#setup').classList.add('hide');
   $('#app').classList.remove('hide');
+  renderPackedStatus();
   refresh();
+  loadPacked();          // deliberately not awaited: the dots repaint when it lands
 }
 
 function pickViaInput(err) {

@@ -189,6 +189,7 @@ scripts/
   extract_vo.py  bulk-dump shipped VO to originals/ as MP3
   build_mod.py   source/ -> build/<name>/pak01_dir.vpk   ← the pipeline
   build_recorder.py  inline recorder/ into one distributable HTML file
+  pack_app.py    zip that file + a readme -> dist/deadlock-vo-recorder.zip
   probe*.py      the three format investigations; kept as a record, not part of a build
 recorder/      the voice actors' browser app (index.html + app.js, dist/ = what you send)
 originals/     extracted shipped clips, path-mirrored: sounds/vo/<hero>/…
@@ -203,8 +204,16 @@ packed/        <name>.tsv — the committed record of which lines are done
 self-contained file:
 
 ```bash
-python3 scripts/build_recorder.py   # -> recorder/dist/deadlock-vo-recorder.html (51 KB)
+python3 scripts/build_mod.py --name main   # refreshes packed/main.tsv first
+python3 scripts/build_recorder.py   # -> recorder/dist/deadlock-vo-recorder.html (53 KB)
+python3 scripts/pack_app.py         # -> dist/deadlock-vo-recorder.zip (18 KB), what you send
 ```
+
+`pack_app.py` rebuilds the HTML first so the archive can never lag the sources, and adds
+`README.txt` — the recording brief: the length limit and why it is hard, what post can
+and cannot fix (hiss and level yes; distortion, echo and one-off noises no), and not to
+rename the files. Zip timestamps are fixed, so packing unchanged sources twice gives an
+identical archive.
 
 **It ships no audio.** Everyone recording has Deadlock installed, so the app parses
 *their* `pak01_dir.vpk` in JavaScript and slices the MP3 payloads out of the chunk
@@ -237,6 +246,22 @@ uploaded anywhere. (Shipping the clips instead would have meant 2.19 GB / 69,228
   length, the wave fills left to right as you speak, there's a mark at 80%, and recording
   stops itself at the end. `mp3Duration()` gets the limit from the shipped MP3's frame
   headers — verified against ffprobe on 13 clips, matching to 4 decimal places.
+- **Lines already in the pack show a yellow dot.** Three states: green = a take in
+  this actor's own output folder or browser storage, yellow = recorded by someone
+  else and committed to the mod, grey = nobody. Local always wins, since a take on
+  that machine is the one that would be sent back. "To-do only" and the per-character
+  progress bar count both colours as covered.
+  The list is the **asset column of `packed/main.tsv` in the public repo**, fetched
+  from `raw.githubusercontent.com` at startup (`PACKED_URL` in `app.js`), so a copy
+  handed out weeks ago still shows what is current — push a build's tsv and everyone's
+  app updates. That fetch is **the only network request the app makes**: a public raw
+  URL, CORS-open (`access-control-allow-origin: *`, so `file://` works), a bare GET
+  with nothing sent. It is not awaited, so startup never blocks on it, and it is
+  allowed to fail — `build_recorder.py` still bakes the local tsv into `PACKED` as an
+  offline fallback, and with neither the app just shows everything as not recorded.
+  `packed/main.tsv` does not exist yet: it appears on the first
+  `build_mod.py --name main`. Until then the fetch 404s and the fallback covers it.
+  If the repo is ever renamed or made private, `PACKED_URL` is the one line to fix.
 - **Setup is two folders: the game, then an output folder for the takes.** Each take is
   written into the output folder the moment recording stops, so there is no export step
   and nothing is lost if the browser closes. On a later visit that folder is re-scanned

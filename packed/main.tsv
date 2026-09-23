@@ -1,0 +1,14 @@
+# every line packed into this mod, one per replaced asset
+# sha256 is of the source audio; 'cut' marks a take that was
+# longer than the line it replaces and had its tail removed
+asset	source	sha256	orig_s	take_s	packed_s	packed_bytes	cut
+sounds/vo/boho/boho_select_01.vsnd_c	boho_test/sounds~vo~boho~boho_select_01.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	3.709	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_02.vsnd_c	boho_test/sounds~vo~boho~boho_select_02.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	8.438	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_03.vsnd_c	boho_test/sounds~vo~boho~boho_select_03.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	8.359	2.760	2.795	39496	-
+sounds/vo/boho/boho_select_04.vsnd_c	boho_test/sounds~vo~boho~boho_select_04.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	4.728	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_05.vsnd_c	boho_test/sounds~vo~boho~boho_select_05.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	7.889	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_06.vsnd_c	boho_test/sounds~vo~boho~boho_select_06.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	4.049	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_07.vsnd_c	boho_test/sounds~vo~boho~boho_select_07.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	10.344	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_08.vsnd_c	boho_test/sounds~vo~boho~boho_select_08.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	7.628	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_09.vsnd_c	boho_test/sounds~vo~boho~boho_select_09.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	4.180	2.760	2.795	45138	-
+sounds/vo/boho/boho_select_10.vsnd_c	boho_test/sounds~vo~boho~boho_select_10.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	7.863	2.760	2.795	45138	-

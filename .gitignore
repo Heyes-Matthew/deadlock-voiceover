@@ -19,6 +19,9 @@ build/
 # The single-file recorder — regenerate with scripts/build_recorder.py
 recorder/dist/
 
+# The archive sent to voice actors — regenerate with scripts/pack_app.py
+dist/
+
 # Python
 __pycache__/
 *.py[cod]

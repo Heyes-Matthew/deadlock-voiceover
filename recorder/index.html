@@ -8,6 +8,7 @@
 :root{
   --bg:#f6f5f3; --panel:#fff; --ink:#1a1916; --muted:#6c6862; --line:#e2ded7;
   --accent:#b4622f; --accent-soft:#f4e6dc; --ok:#3f7d52; --rec:#c0392b;
+  --packed:#c8a020; --packed-soft:#f7eccb;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
@@ -15,12 +16,14 @@
   :root:not([data-theme="light"]){
     --bg:#16151a; --panel:#1e1d23; --ink:#eceaf0; --muted:#9a95a3; --line:#2f2d36;
     --accent:#e08a52; --accent-soft:#38291f; --ok:#6fbd85; --rec:#e0645a;
+    --packed:#d9b23f; --packed-soft:#3a3117;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
   }
 }
 :root[data-theme="dark"]{
   --bg:#16151a; --panel:#1e1d23; --ink:#eceaf0; --muted:#9a95a3; --line:#2f2d36;
   --accent:#e08a52; --accent-soft:#38291f; --ok:#6fbd85; --rec:#e0645a;
+  --packed:#d9b23f; --packed-soft:#3a3117;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
@@ -86,6 +89,7 @@ code{font-family:var(--mono);font-size:.9em;background:var(--accent-soft);
 .row .dur{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--line);justify-self:center}
 .dot.done{background:var(--ok)}
+.dot.packed{background:var(--packed)}
 .mini{padding:4px 9px;font-size:12px;border-radius:6px}
 
 #panel{border-top:1px solid var(--line);background:var(--panel);padding:16px 20px}
@@ -103,6 +107,10 @@ code{font-family:var(--mono);font-size:.9em;background:var(--accent-soft);
 #meter i{display:block;height:100%;width:0;background:var(--ok);transition:width .06s}
 #meter.clip i{background:var(--rec)}
 .badge{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.badge.packed{background:var(--packed-soft);color:var(--packed)}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);align-items:center}
+.legend span{display:flex;gap:5px;align-items:center}
+.legend .dot{display:inline-block;justify-self:unset;flex:none}
 kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);
   border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--muted)}
 #empty{padding:60px 20px;text-align:center;color:var(--muted)}
@@ -171,6 +179,8 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);
       <select id="cat"><option value="">All categories</option></select>
       <label class="stat"><input type="checkbox" id="todo"> To-do only</label>
       <span class="spacer"></span>
+      <span class="legend"><span><i class="dot done"></i>yours</span><span><i class="dot packed"></i>in the pack</span></span>
+      <span class="stat" id="packedStatus"></span>
       <span class="stat" id="count">—</span>
       <span class="stat" id="saveStatus"></span>
       <div id="prog"><i></i></div>
