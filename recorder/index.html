@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deadlock VO Recorder</title>
+<style>
+:root{
+  --bg:#f6f5f3; --panel:#fff; --ink:#1a1916; --muted:#6c6862; --line:#e2ded7;
+  --accent:#b4622f; --accent-soft:#f4e6dc; --ok:#3f7d52; --rec:#c0392b;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16151a; --panel:#1e1d23; --ink:#eceaf0; --muted:#9a95a3; --line:#2f2d36;
+    --accent:#e08a52; --accent-soft:#38291f; --ok:#6fbd85; --rec:#e0645a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16151a; --panel:#1e1d23; --ink:#eceaf0; --muted:#9a95a3; --line:#2f2d36;
+  --accent:#e08a52; --accent-soft:#38291f; --ok:#6fbd85; --rec:#e0645a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);
+  background:var(--panel);border-radius:8px;padding:7px 13px;transition:.15s}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.rec{background:var(--rec);border-color:var(--rec);color:#fff;font-weight:600}
+input[type=search],select{font:inherit;color:inherit;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;padding:7px 11px;min-width:0}
+.hide{display:none !important}
+
+/* ---------- setup screen ---------- */
+#setup{max-width:760px;margin:0 auto;padding:48px 16px}
+#setup h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
+#setup .sub{color:var(--muted);margin:0 0 28px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 8px}
+.card p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0 0 18px}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 34px;color:var(--muted);font-size:14px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:22px;height:22px;
+  border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;
+  font-size:12px;display:grid;place-items:center}
+code{font-family:var(--mono);font-size:.9em;background:var(--accent-soft);
+  color:var(--accent);padding:1px 6px;border-radius:5px}
+.err{color:var(--rec);font-size:14px;margin-top:12px;white-space:pre-wrap}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+
+/* ---------- app shell ---------- */
+#app{display:grid;grid-template-columns:300px 1fr;height:100vh}
+@media (max-width:820px){#app{grid-template-columns:1fr;height:auto}}
+#side{border-right:1px solid var(--line);background:var(--panel);
+  display:flex;flex-direction:column;min-height:0}
+#side header{padding:14px 16px;border-bottom:1px solid var(--line)}
+#side h1{font-size:15px;margin:0 0 10px;letter-spacing:-.01em}
+#groups{overflow-y:auto;flex:1;padding:8px}
+.grp{width:100%;text-align:left;border:0;background:none;border-radius:8px;
+  padding:7px 10px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.grp:hover{background:var(--accent-soft)}
+.grp[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.grp .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.grp[aria-current="true"] .n{color:var(--accent)}
+
+#main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#bar{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;
+  gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+#bar .spacer{flex:1}
+#prog{height:5px;background:var(--line);border-radius:3px;overflow:hidden;width:150px}
+#prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.stat{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+#list{flex:1;overflow-y:auto;padding:10px 12px}
+.row{display:grid;grid-template-columns:26px 1fr auto auto;gap:10px;align-items:center;
+  padding:9px 12px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+.row:hover{background:var(--panel)}
+.row[aria-selected="true"]{background:var(--panel);border-color:var(--accent);box-shadow:var(--shadow)}
+.row .nm{font-family:var(--mono);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .dur{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line);justify-self:center}
+.dot.done{background:var(--ok)}
+.mini{padding:4px 9px;font-size:12px;border-radius:6px}
+
+#panel{border-top:1px solid var(--line);background:var(--panel);padding:16px 20px}
+#panel .name{font-family:var(--mono);font-size:14px;margin-bottom:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#panel .path{font-size:12px;color:var(--muted);margin-bottom:14px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#viz{display:block;width:100%;height:60px;border-radius:6px;background:var(--bg);
+  border:1px solid var(--line);margin-bottom:8px}
+.vizlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-bottom:12px}
+.vizlab .over{color:var(--rec);font-weight:600}
+#meter{width:150px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+#meter i{display:block;height:100%;width:0;background:var(--ok);transition:width .06s}
+#meter.clip i{background:var(--rec)}
+.badge{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--muted)}
+#empty{padding:60px 20px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1>Deadlock VO Recorder</h1>
+  <p class="sub">Record replacement voice lines for a Deadlock voice pack.</p>
+
+  <div class="card" id="gameCard">
+    <h2>Point it at your Deadlock install</h2>
+    <p>Nothing is uploaded anywhere. The app reads the game's voice lines straight off your
+       disk so you can hear the original before recording your take.</p>
+    <ol class="steps">
+      <li>Click below and select your <code>Deadlock</code> folder — the one containing
+          <code>game</code>. In Steam: right-click Deadlock → Manage → Browse local files.</li>
+      <li>Your browser will ask permission to read the folder. Allow it.</li>
+      <li>Choose a folder for your recordings. Each take is written there the moment
+          you stop recording.</li>
+      <li>Pick a character, listen, record. Each line has a time limit — the original's
+          own length — shown as the width of the wave display; recording stops there.
+          A take that ran longer would be silent in game.</li>
+      <li>When you're done, zip that folder and send it back.</li>
+    </ol>
+    <div class="note hide" id="autoStatus"></div>
+    <button class="primary" id="pick">Choose Deadlock folder</button>
+    <div class="note">Chrome or Edge recommended. Firefox works, but exporting is a single
+      download instead of writing to a folder.</div>
+    <div class="err hide" id="setupErr"></div>
+  </div>
+
+  <div class="card hide" id="outCard">
+    <h2>Where should takes be saved?</h2>
+    <p>Pick a folder for your recordings — an empty one is easiest. Every take is written
+       there as a <code>.wav</code> as soon as you stop recording, so nothing is lost if the
+       browser closes. Reopen the same folder later and your recordings are still listed,
+       ready to play back or redo.</p>
+    <div class="note hide" id="outStatus"></div>
+    <button class="primary" id="outPick">Choose folder for recordings</button>
+    <div class="note">The browser will ask permission to save to it. Allow it.
+      <button class="mini" id="outSkip">Skip — keep takes in the browser</button></div>
+    <div class="err hide" id="outErr"></div>
+  </div>
+
+  <div class="card">
+    <h2>Microphone</h2>
+    <p>Recording uses your mic with browser processing (noise suppression, auto gain,
+       echo cancellation) switched off, so takes stay raw. Grant access when prompted.</p>
+  </div>
+</div>
+
+<div id="app" class="hide">
+  <aside id="side">
+    <header>
+      <h1>Deadlock VO Recorder</h1>
+      <input type="search" id="q" placeholder="Search all lines…" style="width:100%">
+    </header>
+    <div id="groups"></div>
+  </aside>
+
+  <div id="main">
+    <div id="bar">
+      <strong id="who">—</strong>
+      <select id="cat"><option value="">All categories</option></select>
+      <label class="stat"><input type="checkbox" id="todo"> To-do only</label>
+      <span class="spacer"></span>
+      <span class="stat" id="count">—</span>
+      <span class="stat" id="saveStatus"></span>
+      <div id="prog"><i></i></div>
+      <button class="mini" id="theme" title="Toggle theme">◐</button>
+      <button class="mini" id="export">Export…</button>
+    </div>
+
+    <div id="list"></div>
+    <div id="empty" class="hide">No lines match.</div>
+
+    <div id="panel">
+      <div class="name" id="pName">Select a line</div>
+      <div class="path" id="pPath">—</div>
+      <canvas id="viz"></canvas>
+      <div class="vizlab">
+        <span id="vizTime">—</span>
+        <span id="vizLimit"></span>
+      </div>
+      <div class="controls">
+        <button id="play">▶ Original <kbd>space</kbd></button>
+        <button id="record" class="rec">● Record <kbd>R</kbd></button>
+        <button id="playMine" disabled>▶ My take <kbd>P</kbd></button>
+        <button id="del" disabled class="mini">Delete take</button>
+        <div id="meter"><i></i></div>
+        <span class="badge hide" id="tookBadge"></span>
+        <span class="spacer"></span>
+        <button id="prev" class="mini">↑ Prev</button>
+        <button id="next" class="mini">↓ Next <kbd>N</kbd></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

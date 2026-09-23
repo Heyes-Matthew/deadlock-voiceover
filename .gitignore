@@ -1,0 +1,33 @@
+# Audio. None of this belongs in the repo: the extracted clips are Valve's and
+# are not redistributable, and the takes are large binaries that change often.
+originals/          # shipped VO dumped by extract_vo.py — local reference only
+source/             # replacement audio sent back by the voice actors
+tests/              # scratch takes used to check a build
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.opus
+*.m4a
+*.aif
+*.aiff
+
+# Build output — regenerate with scripts/build_mod.py
+build/
+*.vpk
+
+# The single-file recorder — regenerate with scripts/build_recorder.py
+recorder/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

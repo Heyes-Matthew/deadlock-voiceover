@@ -1,0 +1,6 @@
+# every line packed into this mod, one per replaced asset
+# sha256 is of the source audio; 'cut' marks a take that was
+# longer than the line it replaces and had its tail removed
+asset	source	sha256	orig_s	take_s	packed_s	packed_bytes	cut
+sounds/vo/atlas/atlas_select_01.vsnd_c	sounds~vo~atlas~atlas_select_01.wav	d0160e914178a276c8b4c8c7e2450a390dd109ef624bbc7dd132a8944261e90b	2.847	2.760	2.795	39496	-
+sounds/vo/atlas/atlas_select_05.vsnd_c	sounds~vo~atlas~atlas_select_05.wav	c1d08cd5c6642c398fd5c92e99787702820fee6942e4d579d7a3c2d00f8c6dde	1.881	1.920	1.855	26330	cut
